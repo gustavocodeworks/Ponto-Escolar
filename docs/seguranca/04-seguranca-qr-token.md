@@ -2,20 +2,15 @@
 
 ## O que foi implementado
 
-- Geracao de token forte com crypto.randomBytes.
-- Armazenamento no banco apenas do hash SHA-256 do token.
-- Expiracao obrigatoria por data e hora.
-- Flags de ativacao/desativacao.
-- Controle de max_uso e uso_atual para reduzir reutilizacao indevida.
-- Endpoint de validacao com retorno de status (valido, expirado, desativado, limite_uso, inexistente).
+- Token diario deterministico por data de `America/Sao_Paulo`.
+- Rotacao automatica na virada do dia (00:00 horario de Brasilia).
+- Validacao em memoria (sem necessidade de consulta na tabela de tokens).
+- Comparacao em tempo constante (`timingSafeEqual`) para reduzir risco de side channel.
+- Endpoint de validacao com retorno de status (`valido` ou `invalido`).
 - Auditoria para tentativas invalidas.
 
 ## Arquivos principais
 
+- src/services/dailyQrTokenService.js
 - src/controllers/adminQrController.js
-- src/utils/token.js
-- ponto.sql
-
-## Tabela de suporte
-
-- qr_tokens
+- src/controllers/punchController.js

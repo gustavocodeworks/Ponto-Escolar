@@ -113,19 +113,6 @@ const paginationValidator = withValidation([
   query('q').optional().trim().isLength({ max: 120 }).withMessage('q deve ter no maximo 120 caracteres').escape()
 ]);
 
-const createQrTokenValidator = withValidation([
-  body('ttlMinutos')
-    .optional()
-    .isInt({ min: 1, max: 1440 })
-    .withMessage('ttlMinutos deve ser entre 1 e 1440')
-    .toInt(),
-  body('maxUso')
-    .optional()
-    .isInt({ min: 1, max: 2000 })
-    .withMessage('maxUso deve ser entre 1 e 2000')
-    .toInt()
-]);
-
 const qrTokenIdParamValidator = withValidation([
   param('id').isInt({ min: 1 }).withMessage('ID do token invalido').toInt()
 ]);
@@ -147,8 +134,20 @@ const baterPontoValidator = withValidation([
     .withMessage('qrToken e obrigatorio')
     .matches(QR_TOKEN_REGEX)
     .withMessage('qrToken invalido'),
-  body('latitude').isFloat({ min: -90, max: 90 }).withMessage('latitude invalida').toFloat(),
-  body('longitude').isFloat({ min: -180, max: 180 }).withMessage('longitude invalida').toFloat()
+  body('latitude')
+    .notEmpty()
+    .withMessage('Localizacao obrigatoria para bater ponto')
+    .bail()
+    .isFloat({ min: -90, max: 90 })
+    .withMessage('latitude invalida')
+    .toFloat(),
+  body('longitude')
+    .notEmpty()
+    .withMessage('Localizacao obrigatoria para bater ponto')
+    .bail()
+    .isFloat({ min: -180, max: 180 })
+    .withMessage('longitude invalida')
+    .toFloat()
 ]);
 
 module.exports = {
@@ -157,7 +156,6 @@ module.exports = {
   updateFuncionarioValidator,
   funcionarioStatusValidator,
   paginationValidator,
-  createQrTokenValidator,
   qrTokenIdParamValidator,
   validateQrTokenValidator,
   baterPontoValidator

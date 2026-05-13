@@ -121,6 +121,18 @@ const IS_PRODUCTION = NODE_ENV === 'production';
 
 const dbPassword = process.env.DB_PASSWORD ?? process.env.DB_PASS;
 const dbName = process.env.DB_NAME ?? process.env.DB;
+const schoolLatitude = parseFloatValue(
+  getRequiredVar('SCHOOL_LATITUDE', process.env.COMPANY_LATITUDE),
+  'SCHOOL_LATITUDE',
+  -90,
+  90
+);
+const schoolLongitude = parseFloatValue(
+  getRequiredVar('SCHOOL_LONGITUDE', process.env.COMPANY_LONGITUDE),
+  'SCHOOL_LONGITUDE',
+  -180,
+  180
+);
 
 const env = {
   NODE_ENV,
@@ -135,8 +147,10 @@ const env = {
   DB_NAME: getRequiredVar('DB_NAME', dbName),
   JWT_SECRET: validateJwtSecret(getRequiredVar('JWT_SECRET')),
   JWT_EXPIRES_IN: validateJwtExpiresIn(getRequiredVar('JWT_EXPIRES_IN')),
-  COMPANY_LATITUDE: parseFloatValue(getRequiredVar('COMPANY_LATITUDE'), 'COMPANY_LATITUDE', -90, 90),
-  COMPANY_LONGITUDE: parseFloatValue(getRequiredVar('COMPANY_LONGITUDE'), 'COMPANY_LONGITUDE', -180, 180),
+  SCHOOL_LATITUDE: schoolLatitude,
+  SCHOOL_LONGITUDE: schoolLongitude,
+  COMPANY_LATITUDE: schoolLatitude,
+  COMPANY_LONGITUDE: schoolLongitude,
   ALLOWED_RADIUS_METERS: parseFloatValue(getRequiredVar('ALLOWED_RADIUS_METERS'), 'ALLOWED_RADIUS_METERS', 1, 10000),
   CORS_ORIGINS: validateCorsOrigins(getRequiredVar('CORS_ORIGIN'), IS_PRODUCTION)
 };

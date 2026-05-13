@@ -67,6 +67,12 @@ app.get('/', (req, res) => {
 app.get('/index.html', (req, res) => {
   res.sendFile(path.join(frontendRoot, 'index.html'));
 });
+app.get('/bater-ponto', (req, res) => {
+  res.redirect('/ponto');
+});
+app.get('/ponto', (req, res) => {
+  res.sendFile(path.join(frontendRoot, 'index.html'));
+});
 app.get('/admin', (req, res) => {
   res.redirect('/admin/dashboard.html');
 });

@@ -35,36 +35,9 @@ CREATE TABLE IF NOT EXISTS funcionarios (
   CONSTRAINT chk_funcionarios_cpf CHECK (cpf REGEXP '^[0-9]{11}$')
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS qr_tokens (
-  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  token_hash CHAR(64) NOT NULL,
-  token_hint VARCHAR(16) NULL,
-  contexto VARCHAR(40) NOT NULL DEFAULT 'BATIDA_PONTO',
-  ativo TINYINT(1) NOT NULL DEFAULT 1,
-  expira_em DATETIME NOT NULL,
-  desativado_em DATETIME NULL,
-  max_uso INT UNSIGNED NOT NULL DEFAULT 1,
-  uso_atual INT UNSIGNED NOT NULL DEFAULT 0,
-  ultimo_uso_em DATETIME NULL,
-  criado_por_admin_id BIGINT UNSIGNED NULL,
-  criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  atualizado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  UNIQUE KEY uk_qr_tokens_hash (token_hash),
-  KEY idx_qr_tokens_validade (ativo, expira_em),
-  KEY idx_qr_tokens_contexto (contexto),
-  CONSTRAINT chk_qr_tokens_max_uso CHECK (max_uso >= 1),
-  CONSTRAINT chk_qr_tokens_uso CHECK (uso_atual <= max_uso),
-  CONSTRAINT fk_qr_tokens_admin FOREIGN KEY (criado_por_admin_id)
-    REFERENCES admins (id)
-    ON UPDATE CASCADE
-    ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS registro_de_pontos (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   funcionario_id BIGINT UNSIGNED NOT NULL,
-  qr_token_id BIGINT UNSIGNED NULL,
   data_referencia DATE NOT NULL,
   sequencia TINYINT UNSIGNED NOT NULL,
   tipo ENUM('ENTRADA', 'SAIDA_ALMOCO', 'VOLTA_ALMOCO', 'SAIDA') NOT NULL,
@@ -84,11 +57,7 @@ CREATE TABLE IF NOT EXISTS registro_de_pontos (
   CONSTRAINT fk_pontos_funcionario FOREIGN KEY (funcionario_id)
     REFERENCES funcionarios (id)
     ON UPDATE CASCADE
-    ON DELETE RESTRICT,
-  CONSTRAINT fk_pontos_qr_token FOREIGN KEY (qr_token_id)
-    REFERENCES qr_tokens (id)
-    ON UPDATE CASCADE
-    ON DELETE SET NULL
+    ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS audit_logs (

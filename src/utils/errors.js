@@ -34,6 +34,12 @@ class NotFoundError extends AppError {
   }
 }
 
+class MethodNotAllowedError extends AppError {
+  constructor(message = 'Method not allowed', details = null) {
+    super(message, { statusCode: 405, code: 'METHOD_NOT_ALLOWED', details });
+  }
+}
+
 class ConflictError extends AppError {
   constructor(message = 'Conflict', details = null) {
     super(message, { statusCode: 409, code: 'CONFLICT', details });
@@ -100,6 +106,7 @@ module.exports = {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
+  MethodNotAllowedError,
   ConflictError,
   ValidationError,
   TooManyRequestsError,

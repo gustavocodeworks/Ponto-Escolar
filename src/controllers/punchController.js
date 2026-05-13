@@ -1,8 +1,9 @@
 const env = require('../config/env');
 const { withTransaction } = require('../config/database');
-const { hashToken, isValidTokenFormat, isTokenExpired } = require('../utils/token');
+const { isValidTokenFormat } = require('../utils/token');
 const { isWithinRadius } = require('../utils/location');
 const { maskCpf } = require('../utils/cpf');
+const { isDailyQrTokenValid, getSaoPauloDateKey } = require('../services/dailyQrTokenService');
 const {
   BadRequestError,
   ConflictError,
@@ -18,7 +19,7 @@ function getClientIp(req) {
   return req.headers['x-forwarded-for']?.split(',')?.[0]?.trim() || req.ip || null;
 }
 
-function getSaoPauloDateTime() {
+function getSaoPauloDateTime(referenceDate = new Date()) {
   const formatter = new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'America/Sao_Paulo',
     year: 'numeric',
@@ -30,7 +31,7 @@ function getSaoPauloDateTime() {
     hour12: false
   });
 
-  const parts = formatter.formatToParts(new Date());
+  const parts = formatter.formatToParts(referenceDate);
   const map = {};
   parts.forEach((part) => {
     map[part.type] = part.value;
@@ -40,22 +41,6 @@ function getSaoPauloDateTime() {
     date: `${map.year}-${map.month}-${map.day}`,
     dateTime: `${map.year}-${map.month}-${map.day} ${map.hour}:${map.minute}:${map.second}`
   };
-}
-
-function getQrTokenStatus(token) {
-  if (!token) {
-    return 'inexistente';
-  }
-  if (!token.ativo) {
-    return 'desativado';
-  }
-  if (isTokenExpired(token.expira_em)) {
-    return 'expirado';
-  }
-  if (Number(token.uso_atual) >= Number(token.max_uso)) {
-    return 'limite_uso';
-  }
-  return 'valido';
 }
 
 async function registerPunch(req, res, next) {
@@ -77,17 +62,23 @@ async function registerPunch(req, res, next) {
       throw new BadRequestError('QR token malformado');
     }
 
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      throw new BadRequestError('Localizacao invalida para registro de ponto');
+    }
+
     const distanceCheck = isWithinRadius(
-      { latitude: env.COMPANY_LATITUDE, longitude: env.COMPANY_LONGITUDE },
+      { latitude: env.SCHOOL_LATITUDE, longitude: env.SCHOOL_LONGITUDE },
       { latitude, longitude },
       env.ALLOWED_RADIUS_METERS
     );
 
     if (!distanceCheck.distanceMeters && distanceCheck.distanceMeters !== 0) {
-      throw new BadRequestError('Coordenadas invalidas');
+      throw new BadRequestError('Localizacao invalida para registro de ponto');
     }
 
-    const { date, dateTime } = getSaoPauloDateTime();
+    const now = new Date();
+    const { date, dateTime } = getSaoPauloDateTime(now);
+    const tokenDate = getSaoPauloDateKey(now);
 
     const punch = await withTransaction(async (tx) => {
       const funcionario = await tx.executeOne(
@@ -114,24 +105,15 @@ async function registerPunch(req, res, next) {
         throw new ForbiddenError('Funcionario inativo');
       }
 
-      const qrTokenRecord = await tx.executeOne(
-        `SELECT id, ativo, expira_em, max_uso, uso_atual
-         FROM qr_tokens
-         WHERE token_hash = ?
-         LIMIT 1
-         FOR UPDATE`,
-        [hashToken(qrToken)]
-      );
-
-      const tokenStatus = getQrTokenStatus(qrTokenRecord);
-      if (tokenStatus !== 'valido') {
+      const qrTokenValido = isDailyQrTokenValid(qrToken, now);
+      if (!qrTokenValido) {
         await registerAuditLog({
           evento: 'tentativa_qr_invalido',
           nivel: 'WARN',
           funcionarioId: funcionario.id,
           mensagem: 'Tentativa de batida com QR token invalido',
           ipOrigem,
-          metadados: { status: tokenStatus, token_id: qrTokenRecord?.id || null }
+          metadados: { status: 'invalido', data_referencia: tokenDate }
         });
         throw new UnauthorizedError('QR token invalido');
       }
@@ -145,7 +127,7 @@ async function registerPunch(req, res, next) {
           ipOrigem,
           metadados: { distancia_metros: distanceCheck.distanceMeters }
         });
-        throw new ForbiddenError('Localizacao fora da area permitida');
+        throw new ForbiddenError('Voce so pode bater ponto dentro da area permitida da escola.');
       }
 
       const countRow = await tx.executeOne(
@@ -166,11 +148,10 @@ async function registerPunch(req, res, next) {
 
       const insertResult = await tx.execute(
         `INSERT INTO registro_de_pontos
-         (funcionario_id, qr_token_id, data_referencia, sequencia, tipo, registrado_em, latitude, longitude, distancia_metros, ip_origem)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (funcionario_id, data_referencia, sequencia, tipo, registrado_em, latitude, longitude, distancia_metros, ip_origem)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           funcionario.id,
-          qrTokenRecord.id,
           date,
           sequencia,
           tipo,
@@ -180,13 +161,6 @@ async function registerPunch(req, res, next) {
           distanceCheck.distanceMeters,
           ipOrigem
         ]
-      );
-
-      await tx.execute(
-        `UPDATE qr_tokens
-         SET uso_atual = uso_atual + 1, ultimo_uso_em = ?
-         WHERE id = ?`,
-        [dateTime, qrTokenRecord.id]
       );
 
       return {

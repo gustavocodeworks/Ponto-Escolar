@@ -37,8 +37,8 @@ npm start
 - `DB_NAME`
 - `JWT_SECRET`
 - `JWT_EXPIRES_IN`
-- `COMPANY_LATITUDE`
-- `COMPANY_LONGITUDE`
+- `SCHOOL_LATITUDE` (aceita fallback legado `COMPANY_LATITUDE`)
+- `SCHOOL_LONGITUDE` (aceita fallback legado `COMPANY_LONGITUDE`)
 - `ALLOWED_RADIUS_METERS`
 - `CORS_ORIGIN`
 
@@ -46,6 +46,8 @@ npm start
 Base: `/api`
 
 ### Publicas
+- `GET /ponto` (mesma `index.html` em modo de batida publica)
+- `GET /bater-ponto` (alias que redireciona para `/ponto`)
 - `POST /pontos/bater`
 - `POST /admin/auth/login`
 - `GET /health` (fora de `/api`)
@@ -56,9 +58,9 @@ Base: `/api`
 - `POST /admin/funcionarios`
 - `PATCH /admin/funcionarios/:id`
 - `PATCH /admin/funcionarios/:id/status`
-- `GET /admin/qr-tokens`
-- `POST /admin/qr-tokens`
-- `PATCH /admin/qr-tokens/:id/desativar`
+- `GET /admin/qr-tokens` (retorna o token diario atual)
+- `POST /admin/qr-tokens` (retorna o token diario atual)
+- `PATCH /admin/qr-tokens/:id/desativar` (nao aplicavel para token diario)
 - `POST /admin/qr-tokens/validar`
 - `GET /admin/pontos/resumo`
 - `GET /admin/pontos/hoje`
@@ -80,9 +82,14 @@ Base: `/api`
 - Queries parametrizadas com `mysql2`.
 - Middleware global de erros (sem stack trace em producao).
 - CPF mascarado nas respostas.
-- Fluxo de QR token com aleatoriedade forte, hash, expiracao, desativacao e limite de uso.
+- Token de QR diario automatico, com rotacao as 00:00 no horario de Brasilia.
 - Registro de ponto com transacao + lock SQL + constraint unica (integridade concorrente).
 - Auditoria de eventos criticos em `audit_logs`.
+
+## Token QR diario (automatico)
+- O token de batida e deterministico por dia e muda automaticamente a cada virada de dia (00:00 em `America/Sao_Paulo`).
+- Nao ha necessidade de gravar token de QR em tabela para validacao diaria.
+- `POST /api/admin/qr-tokens/validar` valida se um token informado corresponde ao token do dia atual.
 
 ## Exemplo de login admin
 `POST /api/admin/auth/login`
@@ -103,3 +110,10 @@ Base: `/api`
   "longitude": -46.633308
 }
 ```
+
+## Link simples para funcionario
+- Link curto recomendado: `/ponto`
+- `/bater-ponto` redireciona para o mesmo link
+- Opcional: usar `/ponto?token=<token_do_dia>` para abrir com token ja preenchido
+- A pagina publica envia a batida para `POST /api/pontos/bater`
+- A localizacao e capturada automaticamente no clique de registrar ponto (sem campos manuais para latitude/longitude).

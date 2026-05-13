@@ -3,12 +3,30 @@
 const bcrypt = require('bcrypt');
 const mysql = require('mysql2/promise');
 
-const REQUIRED_ENV = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
+const NODE_ENV = (process.env.NODE_ENV || 'development').trim().toLowerCase();
+const IS_PRODUCTION = NODE_ENV === 'production';
+const REQUIRED_ENV = IS_PRODUCTION
+  ? ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME']
+  : ['DB_HOST', 'DB_USER', 'DB_NAME'];
 const DEFAULT_BCRYPT_ROUNDS = 12;
+
+function resolveDbPassword() {
+  const dbPassword = process.env.DB_PASSWORD;
+  if (typeof dbPassword === 'string' && dbPassword.trim().length > 0) {
+    return dbPassword;
+  }
+
+  const legacyDbPassword = process.env.DB_PASS;
+  if (typeof legacyDbPassword === 'string' && legacyDbPassword.trim().length > 0) {
+    return legacyDbPassword;
+  }
+
+  return '';
+}
 
 function getMissingEnvVars() {
   return REQUIRED_ENV.filter((key) => {
-    const value = process.env[key];
+    const value = key === 'DB_PASSWORD' ? resolveDbPassword() : process.env[key];
     return typeof value !== 'string' || value.trim().length === 0;
   });
 }
@@ -103,7 +121,7 @@ async function main() {
       host: process.env.DB_HOST,
       port: parsePort(process.env.DB_PORT),
       user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
+      password: resolveDbPassword(),
       database: process.env.DB_NAME,
       charset: 'utf8mb4'
     });

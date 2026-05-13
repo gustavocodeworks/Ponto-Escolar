@@ -7,7 +7,6 @@ const {
 } = require('../controllers/adminQrController');
 const { sensitiveLimiter } = require('../middlewares/rateLimiters');
 const {
-  createQrTokenValidator,
   qrTokenIdParamValidator,
   validateQrTokenValidator,
   paginationValidator
@@ -16,7 +15,7 @@ const {
 const router = Router();
 
 router.get('/', paginationValidator, listQrTokens);
-router.post('/', sensitiveLimiter, createQrTokenValidator, generateQrToken);
+router.post('/', sensitiveLimiter, generateQrToken);
 router.patch('/:id/desativar', sensitiveLimiter, qrTokenIdParamValidator, deactivateQrToken);
 router.post('/validar', sensitiveLimiter, validateQrTokenValidator, validateQrToken);
 

@@ -1532,3 +1532,32 @@ label {
 }
 
 .login-form { display: flex; flex-direction: column; gap: 16px; }
+
+/* ============================================================
+   PAGINA PUBLICA DE BATIDA
+   ============================================================ */
+
+.punch-card {
+  max-width: 520px;
+}
+
+.punch-form-grid {
+  gap: 12px;
+}
+
+.punch-short-link {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.punch-short-link a {
+  color: var(--accent-cyan);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.punch-short-link a:hover {
+  text-decoration: underline;
+}
