@@ -42,13 +42,24 @@ npm start
 - `ALLOWED_RADIUS_METERS`
 - `CORS_ORIGIN`
 
+## Variaveis opcionais de performance
+- `DB_CONNECTION_LIMIT` (padrao: `10`): quantidade maxima de conexoes simultaneas no pool MySQL.
+- `POINT_RATE_LIMIT_WINDOW_MS` (padrao: `300000`): janela do limite de requisicoes para bater ponto.
+- `POINT_RATE_LIMIT_MAX` (padrao: `500`): maximo de tentativas de batida por janela no mesmo IP.
+- `FUNCIONARIO_JWT_EXPIRES_IN` (padrao: `20m`): duracao da sessao criada apos login do funcionario via QR Code.
+- `SCHOOL_UNIT_CODE` (padrao: `DEFAULT`): codigo da unidade/local usado para validar se o QR Code pertence ao ambiente correto.
+
+Para bancos ja existentes, aplique a migracao em `docs/sql/2026-05-18-otimizar-registro-pontos.sql` para atualizar os indices da tabela de batidas.
+Voce pode executar arquivos SQL do projeto com `npm run db:run -- --file=caminho/do/arquivo.sql`.
+
 ## Rotas principais
 Base: `/api`
 
 ### Publicas
-- `GET /ponto` (mesma `index.html` em modo de batida publica)
-- `GET /bater-ponto` (alias que redireciona para `/ponto`)
-- `POST /pontos/bater`
+- `GET /ponto/acessar?qr_code=<codigo>` (entrada via QR Code para login do funcionario)
+- `POST /pontos/validar-qr`
+- `POST /pontos/login`
+- `POST /pontos/registrar`
 - `POST /admin/auth/login`
 - `GET /health` (fora de `/api`)
 
@@ -58,9 +69,9 @@ Base: `/api`
 - `POST /admin/funcionarios`
 - `PATCH /admin/funcionarios/:id`
 - `PATCH /admin/funcionarios/:id/status`
-- `GET /admin/qr-tokens` (retorna o token diario atual)
-- `POST /admin/qr-tokens` (retorna o token diario atual)
-- `PATCH /admin/qr-tokens/:id/desativar` (nao aplicavel para token diario)
+- `GET /admin/qr-tokens` (lista QR Codes gerados)
+- `POST /admin/qr-tokens` (gera QR Code valido para bater ponto)
+- `PATCH /admin/qr-tokens/:id/desativar`
 - `POST /admin/qr-tokens/validar`
 - `GET /admin/pontos/resumo`
 - `GET /admin/pontos/hoje`
@@ -82,14 +93,16 @@ Base: `/api`
 - Queries parametrizadas com `mysql2`.
 - Middleware global de erros (sem stack trace em producao).
 - CPF mascarado nas respostas.
-- Token de QR diario automatico, com rotacao as 00:00 no horario de Brasilia.
-- Registro de ponto com transacao + lock SQL + constraint unica (integridade concorrente).
+- QR Code persistido em banco, com hash seguro, validade e unidade/local.
+- Login do funcionario com senha hash `bcrypt` apos QR Code valido.
+- Registro de ponto com funcionario autenticado, transacao + lock SQL + constraint unica (integridade concorrente).
 - Auditoria de eventos criticos em `audit_logs`.
 
-## Token QR diario (automatico)
-- O token de batida e deterministico por dia e muda automaticamente a cada virada de dia (00:00 em `America/Sao_Paulo`).
-- Nao ha necessidade de gravar token de QR em tabela para validacao diaria.
-- `POST /api/admin/qr-tokens/validar` valida se um token informado corresponde ao token do dia atual.
+## Fluxo QR Code + funcionario
+- O admin gera um QR Code em `POST /api/admin/qr-tokens`.
+- A resposta inclui `qrCode.url`, que aponta para `/ponto/acessar?qr_code=<codigo>`.
+- O funcionario escaneia o QR Code, abre a tela de login e informa CPF/senha.
+- O backend valida QR Code, funcionario, senha, status ativo, localizacao e duplicidade antes de salvar o ponto.
 
 ## Exemplo de login admin
 `POST /api/admin/auth/login`
@@ -100,20 +113,26 @@ Base: `/api`
 }
 ```
 
-## Exemplo de batida de ponto
-`POST /api/pontos/bater`
+## Exemplo de login do funcionario
+`POST /api/pontos/login`
 ```json
 {
   "cpf": "12345678909",
-  "qrToken": "64_caracteres_hexadecimais",
+  "senha": "SenhaDoFuncionario",
+  "qrCode": "64_caracteres_hexadecimais"
+}
+```
+
+## Exemplo de batida de ponto
+`POST /api/pontos/registrar`
+```json
+{
   "latitude": -23.55052,
   "longitude": -46.633308
 }
 ```
 
 ## Link simples para funcionario
-- Link curto recomendado: `/ponto`
-- `/bater-ponto` redireciona para o mesmo link
-- Opcional: usar `/ponto?token=<token_do_dia>` para abrir com token ja preenchido
-- A pagina publica envia a batida para `POST /api/pontos/bater`
-- A localizacao e capturada automaticamente no clique de registrar ponto (sem campos manuais para latitude/longitude).
+- Link do QR Code: `/ponto/acessar?qr_code=<codigo_valido>`
+- `/ponto` e `/bater-ponto` redirecionam para a tela de acesso, mas sem QR valido o login fica bloqueado.
+- A localizacao e capturada automaticamente no clique de registrar ponto.
