@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const env = require('./config/env');
 const apiRoutes = require('./routes');
+const authRoutes = require('./routes/auth');
 const { createPagesRouter } = require('./routes/pages.routes');
 const punchRoutes = require('./routes/punchRoutes');
 const { validateQrCode } = require('./services/qrCodeService');
@@ -118,6 +119,8 @@ app.use(globalLimiter);
 app.get('/health', (req, res) => {
   res.status(200).json({ success: true, data: { status: 'ok' } });
 });
+
+app.use(authRoutes);
 
 function sendView(res, relativePath) {
   res.set(noCacheHtmlHeaders);

@@ -4,6 +4,7 @@ const env = require('../config/env');
 const { execute, executeOne } = require('../config/database');
 const { BadRequestError, UnauthorizedError } = require('../utils/errors');
 const { registerAuditLog } = require('../services/auditLogService');
+const { buildAdminAuthCookie } = require('../utils/authCookie');
 
 function getClientIp(req) {
   return req.headers['x-forwarded-for']?.split(',')?.[0]?.trim() || req.ip || null;
@@ -46,6 +47,7 @@ async function loginAdmin(req, res, next) {
     );
 
     await execute('UPDATE admins SET ultimo_login_em = NOW() WHERE id = ?', [admin.id]);
+    res.setHeader('Set-Cookie', buildAdminAuthCookie(token));
 
     await registerAuditLog({
       evento: 'admin_login_sucesso',

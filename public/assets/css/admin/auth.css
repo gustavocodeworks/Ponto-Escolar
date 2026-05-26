@@ -75,6 +75,9 @@
 }
 .btn-login:hover { background: var(--blue-800); box-shadow: var(--shadow-blue); }
 .btn-login:active { transform: scale(0.985); }
+.btn-login:disabled { cursor: not-allowed; opacity: 0.75; }
+.btn-login.loading .btn-label { display: none; }
+.btn-login.loading .spinner { display: block; }
 
 .login-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0; }
 .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: var(--border-light); }
