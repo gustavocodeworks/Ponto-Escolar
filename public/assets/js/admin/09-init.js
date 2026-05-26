@@ -1,9 +1,14 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   iniciarRelogio();
+  iniciarLogin();
+
+  const sessaoValida = await validarSessaoAdmin();
+  if (!sessaoValida) return;
+
   renderizarPerfil();
+  iniciarLogoutAdmin();
   iniciarSidebar();
   iniciarTabs();
-  iniciarLogin();
 
   renderizarStats();
   renderizarUltimosRegistros();
@@ -26,4 +31,3 @@
     m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
   });
 });
-
