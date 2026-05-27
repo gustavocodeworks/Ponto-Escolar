@@ -1,6 +1,6 @@
 const dotenv = require('dotenv');
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const WEAK_JWT_SECRETS = new Set([
   'secret',
@@ -149,6 +149,7 @@ const env = {
   JWT_SECRET: validateJwtSecret(getRequiredVar('JWT_SECRET')),
   JWT_EXPIRES_IN: validateJwtExpiresIn(getRequiredVar('JWT_EXPIRES_IN')),
   FUNCIONARIO_JWT_EXPIRES_IN: validateJwtExpiresIn(process.env.FUNCIONARIO_JWT_EXPIRES_IN || '20m'),
+  SESSION_SECRET: getRequiredVar('SESSION_SECRET'),
   SCHOOL_LATITUDE: schoolLatitude,
   SCHOOL_LONGITUDE: schoolLongitude,
   SCHOOL_UNIT_CODE: (process.env.SCHOOL_UNIT_CODE || 'DEFAULT').trim(),
