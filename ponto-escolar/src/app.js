@@ -1,12 +1,14 @@
 'use strict';
 
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const helmet = require('helmet');
 const cors = require('cors');
+const session = require('express-session');
 const env = require('./config/env');
 const apiRoutes = require('./routes');
-const authRoutes = require('./routes/auth');
 const { createPagesRouter } = require('./routes/pages.routes');
 const punchRoutes = require('./routes/punchRoutes');
 const { validateQrCode } = require('./services/qrCodeService');
@@ -114,13 +116,23 @@ app.use('/assets', express.static(assetsRoot, staticOptions));
 
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: env.IS_PRODUCTION
+    }
+  })
+);
 app.use(globalLimiter);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ success: true, data: { status: 'ok' } });
 });
-
-app.use(authRoutes);
 
 function sendView(res, relativePath) {
   res.set(noCacheHtmlHeaders);
